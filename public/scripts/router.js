@@ -1,9 +1,10 @@
 import {setupLoginPage} from "./login.js";
 import {fetchRoles} from "./api/auth.js";
+import {setupRegistrationPage} from "./registration.js";
 
 const routes = {
     "/": { template: "/pages/home.html", setup: null },
-    "/registration": { template: "/pages/registration.html", setup: null },
+    "/registration": { template: "/pages/registration.html", setup: setupRegistrationPage },
     "/login": { template: "/pages/login.html", setup: setupLoginPage },
     "/profile": { template: "/pages/profile.html", setup: null },
     "/groups": { template: "/pages/groups.html", setup: null },
@@ -16,6 +17,10 @@ async function loadPage(route) {
         const html = await response.text();
         document.getElementById('content').innerHTML = html;
 
+        if (!localStorage.getItem('authToken')) {
+            await loadNavbar()
+        }
+
         if (typeof route.setup === "function") {
             await route.setup();
         }
@@ -25,9 +30,9 @@ async function loadPage(route) {
     }
 }
 
-function handleRoute(path) {
+export async function handleRoute(path) {
     const route = routes[path] || routes["/"];
-    loadPage(route);
+    await loadPage(route);
 }
 
 function setupRouter() {
@@ -60,36 +65,11 @@ export async function loadNavbar() {
         console.log(roles);
 
         if (token) {
-
+            document.getElementById('Groups').hidden = false;
         }
 
-        if (!roles) {
-            // User not logged in
-            document.querySelector('.student-links').style.display = 'none';
-            document.querySelector('.teacher-links').style.display = 'none';
-            document.querySelector('.admin-links').style.display = 'none';
-            return;
-        }
-
-        if (roles.isStudent) {
-            document.querySelector('.student-links').innerHTML = `
-      <li class="nav-item">
-        <a class="nav-link" href="/courses/my">Мои курсы</a>
-      </li>`;
-        }
-        else {
-            document.querySelector('.student-links').style.display = 'none';
-        }
-
-        if (roles.isTeacher) {
-            document.querySelector('.teacher-links').innerHTML = `
-      <li class="nav-item">
-        <a class="nav-link" href="/courses/teaching">Преподаваемые курсы</a>
-      </li>`;
-        }
-        else {
-            document.querySelector('.teacher-links').style.display = 'none';
-        }
+        document.getElementById('MyCourses').hidden = !roles.isStudent;
+        document.getElementById('TeacherCourses').hidden = !roles.isTeacher;
 
     } catch (error) {
         console.error('Error loading navbar:', error);
